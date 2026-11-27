@@ -13,7 +13,8 @@ An Expense is **immutable once created**: there is no edit or delete endpoint. I
 | Field         | Type             | Meaning                                                                                                  |
 | ------------- | ---------------- | -------------------------------------------------------------------------------------------------------- |
 | `Id`          | `Guid`           | Stable identifier. Generated client-side on the domain object, never reused.                             |
-| `Amount`      | `decimal(18, 2)` | How much was spent, in the user's implicit currency (see *Currency*). Always **positive**.               |
+| `Amount`      | `decimal(18, 2)` | How much was spent, in the Expense's `Currency`. Always **positive**.                                    |
+| `Currency`    | `Currency` enum  | ISO 4217 code: `HUF`, `EUR` or `USD`. Defaults to `HUF` when omitted on create (see *Currency*).          |
 | `Description` | `string`         | Free-text label, 1–200 chars, trimmed. Required.                                                         |
 | `Date`        | `DateOnly`       | The **spent-on** date — when the money left the user's pocket. Not when the row was entered.             |
 | `CreatedAt`   | `DateTimeOffset` | When the row was inserted, in UTC. Set by Postgres (`now() at time zone 'utc'`), never assigned in C#.   |
@@ -35,7 +36,14 @@ There is no concept of debit/credit or sign: every Expense is a spend. Refunds, 
 
 ## Currency
 
-Currently **implicit and single-currency**. The schema has no currency column; the app assumes the user tracks expenses in one currency and is responsible for not mixing. When a multi-currency feature is needed, treat it as a schema change (add `Currency` as ISO 4217 on `Expense`) rather than overloading `Description`.
+Every Expense carries an explicit **ISO 4217** currency code. The supported set is deliberately small: **`HUF`**, **`EUR`**, **`USD`**.
+
+- **Default:** when `currency` is omitted or `null` on create, it is `HUF`. Rows that existed before the column was added were backfilled with `HUF`.
+- **Strict codes:** only the exact uppercase codes are accepted. `"eur"`, `" EUR"`, `""`, `"1"` or unknown codes like `"GBP"` are rejected with a validation problem on `Currency` — no trimming, no case folding.
+- **Storage:** the C# `Currency` enum is stored as text (`character varying(3)`) and guarded by the `CK_Expenses_Currency` CHECK constraint. There is no column default; the API always sets the value. Adding a currency means extending the enum **and** a new migration (the constraint changes).
+- **On the wire:** `currency` is the code as a string in both request and response JSON.
+
+There is **no exchange, conversion, or totalling across currencies**. An `Amount` only means something together with its own `Currency`; never sum or compare amounts of different currencies.
 
 ## Description
 
@@ -60,6 +68,7 @@ These concepts come up in conversation but **do not exist in the model**. If you
 - **Category / Tag / Merchant** — no taxonomy yet; everything lives in `Description`.
 - **User / Account** — the app is single-tenant; there is no auth and no `UserId` on `Expense`.
 - **Budget** — no spending limits, alerts, or periods.
+- **Exchange rate / conversion / cross-currency totals** — each `Amount` stays in its own `Currency`; see *Currency* above.
 - **Recurring expense** — every Expense is a one-off row.
 - **Attachment / Receipt** — no file storage.
 - **Soft delete / archive** — rows are permanent; see *Expense* above.
