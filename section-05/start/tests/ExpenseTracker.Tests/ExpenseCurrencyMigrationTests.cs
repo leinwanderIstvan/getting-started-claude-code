@@ -51,6 +51,39 @@ public sealed class ExpenseCurrencyMigrationTests(PostgresApiFactory factory) : 
         Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
     }
 
+    [Fact]
+    public async Task Should_not_keep_a_column_default_after_migrating()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await _db.Database.MigrateAsync(ct);
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => _db.Database.ExecuteSqlAsync(
+            $"""INSERT INTO "Expenses" ("Id", "Amount", "Description", "Date") VALUES ({Guid.NewGuid()}, {5m}, {"No currency"}, {new DateOnly(2026, 1, 1)})""",
+            ct));
+
+        Assert.Equal(PostgresErrorCodes.NotNullViolation, exception.SqlState);
+    }
+
+    [Fact]
+    public async Task Should_remove_currency_column_and_constraint_when_rolling_back()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var migrator = _db.GetService<IMigrator>();
+        await migrator.MigrateAsync(cancellationToken: ct);
+
+        await migrator.MigrateAsync(InitialCreate, ct);
+
+        var columns = await _db.Database
+            .SqlQuery<int>($"""SELECT count(*)::int AS "Value" FROM information_schema.columns WHERE table_name = 'Expenses' AND column_name = 'Currency'""")
+            .SingleAsync(ct);
+        var constraints = await _db.Database
+            .SqlQuery<int>($"""SELECT count(*)::int AS "Value" FROM pg_constraint WHERE conname = 'CK_Expenses_Currency'""")
+            .SingleAsync(ct);
+
+        Assert.Equal(0, columns);
+        Assert.Equal(0, constraints);
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _db.Database.EnsureDeletedAsync(TestContext.Current.CancellationToken);

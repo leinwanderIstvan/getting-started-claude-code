@@ -40,7 +40,7 @@ Every Expense carries an explicit **ISO 4217** currency code. The supported set 
 
 - **Default:** when `currency` is omitted or `null` on create, it is `HUF`. Rows that existed before the column was added were backfilled with `HUF`.
 - **Strict codes:** only the exact uppercase codes are accepted. `"eur"`, `" EUR"`, `""`, `"1"` or unknown codes like `"GBP"` are rejected with a validation problem on `Currency` — no trimming, no case folding.
-- **Storage:** the C# `Currency` enum is stored as text (`character varying(3)`) and guarded by the `CK_Expenses_Currency` CHECK constraint. There is no column default; the API always sets the value. Adding a currency means extending the enum **and** a new migration (the constraint changes).
+- **Storage:** the C# `Currency` enum is stored as text (`character varying(3)`) and guarded by the `CK_Expenses_Currency` CHECK constraint. There is no column default; the API always sets the value. Adding a currency means extending the enum, a new migration (the constraint changes) **and** `CURRENCIES` in `web/src/lib/currency.ts` so the form offers it.
 - **On the wire:** `currency` is the code as a string in both request and response JSON.
 
 There is **no exchange, conversion, or totalling across currencies**. An `Amount` only means something together with its own `Currency`; never sum or compare amounts of different currencies.

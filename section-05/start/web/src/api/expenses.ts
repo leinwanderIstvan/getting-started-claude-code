@@ -3,7 +3,8 @@ import type { CurrencyCode } from "../lib/currency";
 export interface Expense {
   id: string;
   amount: number;
-  currency: CurrencyCode;
+  /** ISO 4217 code as stored by the API; may be one this SPA build does not offer yet. */
+  currency: string;
   description: string;
   date: string;
   createdAt: string;
