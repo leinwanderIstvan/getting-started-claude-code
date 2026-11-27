@@ -1,6 +1,9 @@
+import type { CurrencyCode } from "../lib/currency";
+
 export interface Expense {
   id: string;
   amount: number;
+  currency: CurrencyCode;
   description: string;
   date: string;
   createdAt: string;
@@ -8,6 +11,7 @@ export interface Expense {
 
 export interface CreateExpenseInput {
   amount: number;
+  currency: CurrencyCode;
   description: string;
   date: string;
 }
