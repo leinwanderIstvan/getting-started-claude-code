@@ -11,10 +11,20 @@ public sealed class ExpenseDbContext(DbContextOptions<ExpenseDbContext> options)
     {
         var expense = modelBuilder.Entity<Expense>();
 
+        var supportedCurrencies = string.Join(", ", Enum.GetNames<Currency>().Select(code => $"'{code}'"));
+        expense.ToTable(t => t.HasCheckConstraint(
+            "CK_Expenses_Currency",
+            $"\"Currency\" IN ({supportedCurrencies})"));
+
         expense.HasKey(e => e.Id);
 
         expense.Property(e => e.Amount)
             .HasPrecision(18, 2);
+
+        expense.Property(e => e.Currency)
+            .HasConversion<string>()
+            .HasMaxLength(3)
+            .IsRequired();
 
         expense.Property(e => e.Description)
             .IsRequired()

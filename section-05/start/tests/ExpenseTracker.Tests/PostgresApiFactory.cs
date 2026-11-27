@@ -18,6 +18,8 @@ public sealed class PostgresApiFactory : WebApplicationFactory<IApiAssemblyMarke
         .WithPassword("expenses")
         .Build();
 
+    public string ConnectionString => _postgres.GetConnectionString();
+
     public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();

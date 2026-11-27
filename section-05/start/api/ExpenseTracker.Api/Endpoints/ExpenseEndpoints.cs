@@ -26,7 +26,7 @@ public static class ExpenseEndpoints
         var expense = await db.Expenses
             .AsNoTracking()
             .Where(e => e.Id == id)
-            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Description, e.Date, e.CreatedAt))
+            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
         return expense is null ? Results.NotFound() : Results.Ok(expense);
@@ -58,6 +58,12 @@ public static class ExpenseEndpoints
             errors["Date"] = ["Date is required."];
         }
 
+        var currency = CurrencyCodes.Default;
+        if (request.Currency is not null && !CurrencyCodes.TryParse(request.Currency, out currency))
+        {
+            errors["Currency"] = [$"Currency must be one of: {CurrencyCodes.Supported}."];
+        }
+
         if (errors.Count > 0)
         {
             return Results.ValidationProblem(errors);
@@ -66,6 +72,7 @@ public static class ExpenseEndpoints
         var expense = new Expense
         {
             Amount = decimal.Round(request.Amount, 2, MidpointRounding.AwayFromZero),
+            Currency = currency,
             Description = request.Description!.Trim(),
             Date = request.Date,
         };
@@ -86,12 +93,12 @@ public static class ExpenseEndpoints
             .AsNoTracking()
             .OrderByDescending(e => e.Date)
             .ThenByDescending(e => e.CreatedAt)
-            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Description, e.Date, e.CreatedAt))
+            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return Results.Ok(expenses);
     }
 
     private static ExpenseResponse ToResponse(Expense e) =>
-        new(e.Id, e.Amount, e.Description, e.Date, e.CreatedAt);
+        new(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt);
 }

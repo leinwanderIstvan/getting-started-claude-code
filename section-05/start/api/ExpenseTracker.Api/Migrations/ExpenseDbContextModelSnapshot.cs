@@ -37,6 +37,11 @@ namespace ExpenseTracker.Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("(now() at time zone 'utc')");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -50,7 +55,10 @@ namespace ExpenseTracker.Api.Migrations
                     b.HasIndex("Date", "CreatedAt")
                         .IsDescending();
 
-                    b.ToTable("Expenses");
+                    b.ToTable("Expenses", t =>
+                        {
+                            t.HasCheckConstraint("CK_Expenses_Currency", "\"Currency\" IN ('HUF', 'EUR', 'USD')");
+                        });
                 });
 #pragma warning restore 612, 618
         }
