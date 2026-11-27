@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using ExpenseTracker.Api.Contracts;
 using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.Domain;
@@ -7,6 +8,13 @@ namespace ExpenseTracker.Api.Endpoints;
 
 public static class ExpenseEndpoints
 {
+    // The single Expense -> ExpenseResponse mapping: EF translates the expression in the
+    // queries, and the compiled delegate maps the entity CreateAsync already holds in memory.
+    private static readonly Expression<Func<Expense, ExpenseResponse>> ToResponseProjection =
+        e => new ExpenseResponse(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt);
+
+    private static readonly Func<Expense, ExpenseResponse> ToResponse = ToResponseProjection.Compile();
+
     public static IEndpointRouteBuilder MapExpenseEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/expenses");
@@ -26,7 +34,7 @@ public static class ExpenseEndpoints
         var expense = await db.Expenses
             .AsNoTracking()
             .Where(e => e.Id == id)
-            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt))
+            .Select(ToResponseProjection)
             .FirstOrDefaultAsync(cancellationToken);
 
         return expense is null ? Results.NotFound() : Results.Ok(expense);
@@ -93,12 +101,9 @@ public static class ExpenseEndpoints
             .AsNoTracking()
             .OrderByDescending(e => e.Date)
             .ThenByDescending(e => e.CreatedAt)
-            .Select(e => new ExpenseResponse(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt))
+            .Select(ToResponseProjection)
             .ToListAsync(cancellationToken);
 
         return Results.Ok(expenses);
     }
-
-    private static ExpenseResponse ToResponse(Expense e) =>
-        new(e.Id, e.Amount, e.Currency.ToString(), e.Description, e.Date, e.CreatedAt);
 }

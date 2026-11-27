@@ -10,27 +10,18 @@ namespace ExpenseTracker.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Add as nullable, backfill existing rows with HUF, then tighten to NOT NULL.
-            // No lasting column default: the API always sets Currency explicitly.
+            // Existing rows are backfilled with HUF through a temporary default: on Postgres 11+
+            // adding a NOT NULL column with a constant default is metadata-only (no row rewrite).
+            // The default is dropped straight away; the API always sets Currency explicitly.
             migrationBuilder.AddColumn<string>(
                 name: "Currency",
                 table: "Expenses",
                 type: "character varying(3)",
                 maxLength: 3,
-                nullable: true);
-
-            migrationBuilder.Sql("""UPDATE "Expenses" SET "Currency" = 'HUF' WHERE "Currency" IS NULL;""");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Currency",
-                table: "Expenses",
-                type: "character varying(3)",
-                maxLength: 3,
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "character varying(3)",
-                oldMaxLength: 3,
-                oldNullable: true);
+                defaultValue: "HUF");
+
+            migrationBuilder.Sql("""ALTER TABLE "Expenses" ALTER COLUMN "Currency" DROP DEFAULT;""");
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Expenses_Currency",

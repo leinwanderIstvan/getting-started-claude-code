@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createExpense, type CreateExpenseInput } from "../api/expenses";
-import { CURRENCIES, DEFAULT_CURRENCY, isCurrencyCode, type CurrencyCode } from "../lib/currency";
+import { CURRENCIES, DEFAULT_CURRENCY, type CurrencyCode } from "../lib/currency";
 import styles from "./ExpenseForm.module.css";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -72,14 +72,7 @@ export function ExpenseForm() {
         </label>
         <label className={styles.field}>
           <span>Currency</span>
-          <select
-            value={currency}
-            onChange={(event) => {
-              if (isCurrencyCode(event.target.value)) {
-                setCurrency(event.target.value);
-              }
-            }}
-          >
+          <select value={currency} onChange={(event) => setCurrency(event.target.value as CurrencyCode)}>
             {CURRENCIES.map((code) => (
               <option key={code} value={code}>
                 {code}

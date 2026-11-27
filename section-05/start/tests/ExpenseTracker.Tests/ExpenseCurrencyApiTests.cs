@@ -54,10 +54,8 @@ public sealed class ExpenseCurrencyApiTests(PostgresApiFactory factory)
         var created = await response.Content.ReadFromJsonAsync<JsonElement>(ct);
         Assert.Equal(currency, created.GetProperty("currency").GetString());
 
-        var id = created.GetProperty("id").GetString();
-        var listed = await client.GetFromJsonAsync<JsonElement>(Endpoint, ct);
-        var persisted = listed.EnumerateArray().Single(e => e.GetProperty("id").GetString() == id);
-        Assert.Equal(currency, persisted.GetProperty("currency").GetString());
+        var fetched = await client.GetFromJsonAsync<JsonElement>(response.Headers.Location, ct);
+        Assert.Equal(currency, fetched.GetProperty("currency").GetString());
     }
 
     [Theory]
